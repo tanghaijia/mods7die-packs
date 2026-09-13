@@ -4,6 +4,10 @@
 .vscode/
 .idea/
 
+# Python 缓存（tools/verify.py 被 import 时会生成）
+__pycache__/
+*.pyc
+
 # 不要提交模组文件：本仓库只放配方数据
 *.zip
 *.7z
