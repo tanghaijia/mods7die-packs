@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pack": "undead-legacy-cn",
+  "pack": "undead-legacy",
   "version": "2.7.32",
   "game_version": { "min": "2.6", "max": "2.6" },
 
