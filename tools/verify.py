@@ -438,14 +438,11 @@ def main() -> int:
                 if manifest.get(key) != entry.get(key):
                     failures.add(where, f"{key} 与配方不一致（索引 {entry.get(key)!r}，配方 {manifest.get(key)!r}）")
 
-        indexed_releases: dict[str, dict] = {}
+        indexed_releases: dict[tuple, dict] = {}
         for release_pos, release_entry in enumerate(entry.get("releases", []) or []):
             release_where = f"{where}.releases[{release_pos}]"
             check_keys(release_where, release_entry, INDEX_RELEASE_KEYS, failures)
             version = release_entry.get("version")
-            if version in indexed_releases:
-                failures.add(release_where, f"索引里版本重复：{version}")
-            indexed_releases[version] = release_entry
             rel_release_path = release_entry.get("path")
             if not isinstance(rel_release_path, str):
                 failures.add(release_where, "path 必须是字符串")
@@ -467,6 +464,14 @@ def main() -> int:
                 failures.add(release_where, "游戏版本区间在索引与配方之间不一致")
             if release.get("overrides") is not None and manifest is not None:
                 apply_overrides(str(rel_release_path), manifest, release["overrides"], failures)
+
+            # 同一版本允许两条路线（完整包 + 增量补丁，见设计文档「同一版本的两条路线」），
+            # 但**同一条路线**不能重复登记。
+            route = "patch" if release.get("patch") is not None else "full"
+            key = (version, route)
+            if key in indexed_releases:
+                failures.add(release_where, f"索引里重复的版本路线：{version}（{route}）")
+            indexed_releases[key] = release_entry
 
         # 磁盘上的 release 文件必须全部登记
         releases_dir = resolve_path(root, rel_pack_path).parent / "releases"
