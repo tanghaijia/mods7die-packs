@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-13T04:18:10Z",
+  "generated_at": "2026-09-13T05:25:02Z",
   "packs": [
     {
       "id": "undead-legacy",
@@ -9,6 +9,14 @@
       "homepage": "https://ul.subquake.com",
       "path": "packs/undead-legacy/pack.jsonc",
       "releases": [
+        {
+          "version": "2.7.32",
+          "game_version": {
+            "min": "2.6",
+            "max": "2.6"
+          },
+          "path": "packs/undead-legacy/releases/2.7.32.jsonc"
+        },
         {
           "version": "2.7.24",
           "game_version": {
