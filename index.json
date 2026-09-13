@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-13T05:25:02Z",
+  "generated_at": "2026-09-13T07:38:15Z",
   "packs": [
     {
       "id": "undead-legacy",
@@ -16,14 +16,6 @@
             "max": "2.6"
           },
           "path": "packs/undead-legacy/releases/2.7.32.jsonc"
-        },
-        {
-          "version": "2.7.24",
-          "game_version": {
-            "min": "2.6",
-            "max": "2.6"
-          },
-          "path": "packs/undead-legacy/releases/2.7.24.jsonc"
         }
       ]
     }
