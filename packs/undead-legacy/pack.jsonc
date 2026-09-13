@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "undead-legacy",
+  "name": "Undead Legacy",
+  "homepage": "https://ul.subquake.com",
+  "summary": "通过 BepInEx 注入并重写核心玩法的大型 overhaul。",
+  "maintainers": [],
+  "provides": ["bepinex"],
+  "conflicts": ["eft-overhaul"],
+
+  // 识别规则：用于“纳管”与整合版识别
+  "detect": {
+    "all": [
+      { "root": "game_root", "glob": "BepInEx/patchers/*MultiFolderLoader*" },
+      { "root": "mods", "glob": "**/UndeadLegacy.dll" }
+    ],
+    "any": [
+      { "modinfo": { "author": "Subquake" } },
+      { "root": "mods", "glob": "**/*亡灵遗产*/ModInfo.xml" }
+    ]
+  },
+
+  // 安装映射：从 staging 到目标根（按本机实测布局）
+  "install": [
+    { "id": "bepinex-core", "target": "game_root", "mode": "tree", "from": "BepInEx" },
+    { "id": "doorstop-libs", "target": "game_root", "mode": "tree", "from": "doorstop_libs" },
+    { "id": "doorstop-cfg", "target": "game_root", "mode": "overlay", "from": "doorstop_config.ini" },
+    { "id": "winhttp", "target": "game_root", "mode": "file", "from": "winhttp.dll" },
+    { "id": "ul-core", "target": "mods", "mode": "tree", "from": "Mods/UndeadLegacy" }
+  ],
+
+  // 安装后校验 + 纳管判据
+  "expect": [
+    { "root": "game_root", "path": "winhttp.dll" },
+    { "root": "game_root", "path": "BepInEx/patchers/BepInEx.MultiFolderLoader.dll" },
+    { "root": "mods", "path": "UndeadLegacy/UndeadLegacy.dll" }
+  ],
+
+  "dependencies": [],
+  "legacy_conflicts": [],
+  "deletions": [],
+
+  // 启动要求：关闭 EAC
+  "launch": { "eac": false },
+
+  // pack 级默认游戏版本区间：仅用于"未登记补丁"的兜底条目做闸门（release 自己的声明优先）
+  "game_version": { "min": "2.6", "max": "2.6" },
+
+  // 版本策略：2.7.x 一系列补丁的安装布局一致，所以没有登记条目的补丁也允许按系列逻辑安装。
+  // 放行有两个前提：结构识别必须确认是同一个模组（执行器强制），用户在计划预览里显式勾选。
+  "version_policy": { "allow_unlisted_patch": true },
+
+  // 版本真值来源（仅用于展示与交叉验证，不作为闸门）
+  "version_sources": {
+    "modinfo": "Mods/UndeadLegacy/ModInfo.xml",
+    "runtime_log": "BepInEx/LogOutput.log"
+  },
+
+  // 版本对账的权威顺序：运行日志 > ModInfo > 我们的记录。
+  // 本机实测三个来源互不相同（ModInfo 2.7.01 / 运行日志 2.7.17 / 条目 2.7.24）：
+  // 作者发补丁时只更新运行时版本号，ModInfo 一整个系列都不动，所以它排在后面。
+  // 只比到"系列"（2.7）：补丁号不同不算问题，系列不同才提示。
+  "version_authority": ["runtime_log", "modinfo", "recorded"],
+
+  // 可选组件：汉化等
+  "optional_components": [
+    {
+      "id": "zh-hans",
+      "name": "简体中文汉化",
+      "detect": { "any": [{ "root": "mods", "glob": "UndeadLegacyChinese" }] },
+      "install": [
+        { "id": "ul-zh", "target": "mods", "mode": "tree", "from": "UndeadLegacyChinese" }
+      ]
+    }
+  ]
+}

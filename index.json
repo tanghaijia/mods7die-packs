@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-13T04:18:10Z",
+  "packs": [
+    {
+      "id": "undead-legacy",
+      "name": "Undead Legacy",
+      "summary": "通过 BepInEx 注入并重写核心玩法的大型 overhaul。",
+      "homepage": "https://ul.subquake.com",
+      "path": "packs/undead-legacy/pack.jsonc",
+      "releases": [
+        {
+          "version": "2.7.24",
+          "game_version": {
+            "min": "2.6",
+            "max": "2.6"
+          },
+          "path": "packs/undead-legacy/releases/2.7.24.jsonc"
+        }
+      ]
+    }
+  ]
+}

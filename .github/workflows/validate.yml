@@ -1,0 +1,35 @@
+name: validate recipes
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 校验用的是应用自身的代码，所以两边一起检出：
+      # "本地/CI 通过" 就等于 "应用能加载这份索引"。
+      - uses: actions/checkout@v4
+        with:
+          repository: tanghaijia/mods7die
+          # mods7pack 命令目前在这个分支上；合并进默认分支后删掉这一行即可
+          ref: community-mod
+          path: .mods7die
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .mods7die
+
+      # 第一次构建要编译 mods7day（含 egui 依赖），大约几分钟；之后有缓存
+      - name: Verify index and recipes
+        working-directory: .mods7die
+        run: cargo run --release -p mods7day --bin mods7pack -- verify "$GITHUB_WORKSPACE"
+
+      - name: Check that index.json is up to date
+        working-directory: .mods7die
+        run: cargo run --release -p mods7day --bin mods7pack -- index "$GITHUB_WORKSPACE" --check
