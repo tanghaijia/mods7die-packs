@@ -17,7 +17,6 @@ https://raw.githubusercontent.com/tanghaijia/mods7die-packs/main/index.json
 ```
 
 也可以 `git clone` 到本地后添加**本地目录源**，改一条配方就能立刻在应用里试。
-
 ## 仓库结构
 
 ```
@@ -25,6 +24,8 @@ index.json                                  # 索引，由 packs/** 生成，不
 packs/<pack-id>/pack.jsonc                  # 系列级配方：识别规则、安装映射、启动要求
 packs/<pack-id>/releases/<版本>.jsonc       # 版本级：文件清单、游戏版本区间、可选差异覆盖
 docs/配方格式.md                             # 字段速查与模板
+tools/verify.py                             # 结构校验（只用标准库，CI 与本地都跑它）
+.github/workflows/validate.yml              # CI
 ```
 
 三层的分工是刻意的：**安装逻辑住在"系列"上**，版本条目只描述"哪个版本、哪些文件、适配哪个
@@ -55,26 +56,44 @@ docs/配方格式.md                             # 字段速查与模板
 
 ## 本地校验
 
-需要一个 mods7die 的检出：
+**两条命令，力度不同：**
 
 ```powershell
+# 1) 结构校验：只用 Python 标准库，秒级，任何时候都能跑
+python tools/verify.py .
+
+# 2) 权威校验：用应用自身的加载代码，需要 mods7die 的检出
 cargo run --release --manifest-path ..\mods7die\Cargo.toml -p mods7day --bin mods7pack -- verify .
 cargo run --release --manifest-path ..\mods7die\Cargo.toml -p mods7day --bin mods7pack -- index . --check
 ```
 
-- `verify`：索引引用的文件是否都在、配方是否合法、`overrides` 是否引用了真实存在的组件、
-  磁盘上有没有**没被索引登记**的配方文件（漏登记 = 应用永远看不到它）、索引是否最新。
-- `index .`：由 `packs/**` 重新生成 `index.json`（改完配方后跑一次）。
-- `index . --check`：CI 用，确认 `index.json` 没被落下。
+`mods7pack verify` 查：索引引用的文件是否都在、配方是否合法、`overrides` 是否引用了真实存在的
+组件、磁盘上有没有**没被索引登记**的配方文件（漏登记 = 应用永远看不到它）、索引是否最新。
+`mods7pack index .` 由 `packs/**` 重新生成 `index.json`（改完配方后跑一次）。
 
-这两个命令和应用加载配方用的是**同一份代码**，所以"本地通过"就等于"应用能加载"。
+`python tools/verify.py` 覆盖同样的结构规则，**权威判定仍然是 `mods7pack`**：前者通过只说明
+"结构上没问题"。两份实现的分工与同步约定写在 `tools/verify.py` 顶部。
 
 ## CI
 
-`.github/workflows/validate.yml` 会检出本仓库与 mods7die，跑上面两条命令。
+`.github/workflows/validate.yml` 有一个 job、三步：
 
-> 注意：`mods7pack` 命令目前在 mods7die 的 `community-mod` 分支上，workflow 里的 `ref` 也指向
-> 它。合并进默认分支后，把 workflow 里的 `ref:` 那一行删掉即可。
+1. **结构校验**（`python tools/verify.py .`）：永远会跑，秒级完成，fork 来的 PR 也能跑。
+2. **权威校验**（`mods7pack verify` + `index --check`）：仅在配置了仓库 secret
+   `MODS7DIE_TOKEN` 时运行。
+3. 没配 token 时打一条 notice 说明只跑了结构校验。
+
+为什么权威校验要绕这么一圈：**mods7die 目前是私有仓库，而本仓库必须公开**（用户的 app 要匿名
+拉取 raw 地址）。公开仓库的 Actions 检不出私有仓库，fork 来的 PR 也拿不到 secret，所以：
+
+- 想让它自动跑：建一个 fine-grained PAT（只需 `Contents: Read` 访问 mods7die），存成仓库
+  secret `MODS7DIE_TOKEN`。
+- 或者把 mods7die 改成公开仓库，然后去掉 workflow 里的 token 那一段。
+- 或者维持现状：**合并前维护者本地跑一次 `mods7pack verify`**（这是权威判定），CI 负责拦住
+  结构性错误。
+
+workflow 里的 `APP_REF` 现在是 `community-mod`（`mods7pack` 命令所在的分支），合并进默认分支后
+改成默认分支名。
 
 ## 待核实（欢迎第一个 PR）
 

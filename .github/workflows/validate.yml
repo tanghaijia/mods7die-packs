@@ -8,28 +8,40 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      # 权威校验要检出的应用仓库与分支（mods7die 目前是私有仓库，见 README 的「CI」一节）
+      APP_REPO: tanghaijia/mods7die
+      APP_REF: community-mod
     steps:
       - uses: actions/checkout@v4
 
-      # 校验用的是应用自身的代码，所以两边一起检出：
-      # "本地/CI 通过" 就等于 "应用能加载这份索引"。
-      - uses: actions/checkout@v4
+      # 1) 结构校验：只用标准库，秒级完成，fork 来的 PR 也能跑。
+      #    规则与应用的 mods7pack 对齐（见 tools/verify.py 顶部说明）。
+      - uses: actions/setup-python@v5
         with:
-          repository: tanghaijia/mods7die
-          # mods7pack 命令目前在这个分支上；合并进默认分支后删掉这一行即可
-          ref: community-mod
-          path: .mods7die
+          python-version: "3.x"
+      - name: Validate structure
+        run: python tools/verify.py .
 
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: .mods7die
+      # 2) 权威校验：用应用自身的加载代码跑 mods7pack verify。
+      #    应用仓库是私有的，所以需要在这里配一个只读 token（仓库 secret：MODS7DIE_TOKEN，
+      #    fine-grained PAT，权限只需 Contents: Read）。
+      #    没配就跳过——结构校验仍然会跑。fork PR 拿不到 secret，因此这一步对它们自动跳过，
+      #    维护者合并前应自己在本地跑一次（见 README）。
+      - name: Authoritative check (optional, needs MODS7DIE_TOKEN)
+        if: env.APP_TOKEN != ''
+        env:
+          APP_TOKEN: ${{ secrets.MODS7DIE_TOKEN }}
+        run: |
+          git clone --quiet --depth 1 --branch "$APP_REF" \
+            "https://x-access-token:$APP_TOKEN@github.com/$APP_REPO.git" .mods7die
+          cd .mods7die
+          cargo run -p mods7day --bin mods7pack -- verify "$GITHUB_WORKSPACE"
+          cargo run -p mods7day --bin mods7pack -- index "$GITHUB_WORKSPACE" --check
 
-      # 第一次构建要编译 mods7day（含 egui 依赖），大约几分钟；之后有缓存
-      - name: Verify index and recipes
-        working-directory: .mods7die
-        run: cargo run --release -p mods7day --bin mods7pack -- verify "$GITHUB_WORKSPACE"
-
-      - name: Check that index.json is up to date
-        working-directory: .mods7die
-        run: cargo run --release -p mods7day --bin mods7pack -- index "$GITHUB_WORKSPACE" --check
+      - name: Note when the authoritative check was skipped
+        if: env.APP_TOKEN == ''
+        env:
+          APP_TOKEN: ${{ secrets.MODS7DIE_TOKEN }}
+        run: |
+          echo "::notice::未配置 MODS7DIE_TOKEN，只跑了结构校验。权威校验请在本地跑 mods7pack verify。"
