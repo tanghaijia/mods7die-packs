@@ -63,7 +63,10 @@ GAME_VERSION_KEYS = {"min", "max"}
 VERSION_POLICY_KEYS = {"allow_unlisted_patch"}
 RELEASE_KEYS = {
     "schema_version", "pack", "version", "game_version", "artifacts", "mirrors", "overrides",
+    "patch",
 }
+# schema.rs::PatchSpec
+PATCH_KEYS = {"from"}
 ARTIFACT_KEYS = {"id", "url", "sha256", "size", "extract", "strip_components"}
 MIRROR_KEYS = {"label", "url", "password", "sha256", "note"}
 OVERRIDE_KEYS = {
@@ -299,6 +302,15 @@ def check_release(path: Path, release, failures: Failures):
         for key in ("label", "url"):
             if not str(mirror.get(key, "")).strip():
                 failures.add(item_where, f"{key} 不能为空")
+    # 增量补丁声明（schema.rs::PatchSpec::validate）：必须声明适用的基线版本
+    patch = release.get("patch")
+    if patch is not None:
+        check_keys(f"{where}.patch", patch, PATCH_KEYS, failures)
+        versions = patch.get("from")
+        if not isinstance(versions, list) or not versions:
+            failures.add(f"{where}.patch", "from 不能为空（补丁必须声明适用的基线版本）")
+        elif all(not str(version).strip() for version in versions):
+            failures.add(f"{where}.patch", "from 里的版本号不能为空")
     return release
 
 
